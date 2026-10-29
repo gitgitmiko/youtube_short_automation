@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Baloo 2'; src: url('../assets/fonts/Baloo2.ttf'); font-weight: 400 800; }
+  :root { --ink: #1B1035; --yellow: #FFC83D; --orange: #F28C28; --green: #2ECC71; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #2a1760; }
+  body { font-family: 'Baloo 2', 'DejaVu Sans', sans-serif; color: var(--ink); position: relative; }
+  #bg { position: absolute; inset: 0; }
+  #abon { position: absolute; left: -10px; top: 1195px; width: 450px; height: 727px; }
+  #fx { position: absolute; inset: 0; pointer-events: none; }
+
+  .brand { position: absolute; top: 46px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 74px;
+           letter-spacing: 3px; line-height: 1; color: #fff; text-shadow: 0 6px 0 rgba(0,0,0,.25); }
+  .brand b { color: var(--yellow); }
+  .chip { position: absolute; top: 138px; left: 50%; transform: translateX(-50%); background: var(--yellow);
+          padding: 6px 30px 2px; border-radius: 40px; font-weight: 800; font-size: 34px; letter-spacing: 2px;
+          border: 5px solid var(--ink); white-space: nowrap; }
+
+  .card { position: absolute; left: 60px; right: 60px; top: 230px; height: 390px; background: #fff;
+          border-radius: 44px; border: 7px solid var(--ink); box-shadow: 0 14px 0 rgba(0,0,0,.25);
+          display: flex; align-items: center; justify-content: center; text-align: center; padding: 30px 46px; }
+  .card .txt { font-weight: 800; line-height: 1.12; }
+  .card.hook { background: var(--yellow); }
+
+  .opt { position: absolute; left: 60px; right: 60px; height: 110px; background: #fff; border-radius: 60px;
+         border: 6px solid var(--ink); display: flex; align-items: center; padding: 0 30px 0 16px;
+         font-weight: 700; font-size: 50px; box-shadow: 0 9px 0 rgba(0,0,0,.25); }
+  .opt .l { flex: 0 0 76px; height: 76px; border-radius: 50%; background: #5B3FD6; color: #fff; font-weight: 800;
+            font-size: 46px; display: flex; align-items: center; justify-content: center; margin-right: 24px; padding-top: 6px; }
+  .opt .o { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 6px; }
+  .opt.correct { background: var(--green); color: #fff; }
+  .opt.correct .l { background: #fff; color: var(--green); }
+  .opt .mark { font-size: 60px; font-weight: 800; margin-left: 10px; }
+
+  .timer { position: absolute; left: 60px; right: 230px; top: 1185px; height: 30px; border-radius: 20px;
+           background: rgba(0,0,0,.3); overflow: hidden; }
+  .timer i { display: block; height: 100%; background: var(--yellow); border-radius: 20px; }
+  .count { position: absolute; right: 60px; top: 1132px; width: 140px; height: 140px; border-radius: 50%;
+           background: var(--yellow); border: 7px solid var(--ink); font-weight: 800; font-size: 92px;
+           display: flex; align-items: center; justify-content: center; padding-top: 14px; }
+
+  .bubble { position: absolute; left: 450px; right: 40px; top: 1300px; min-height: 150px; background: #fff;
+            border: 7px solid var(--ink); border-radius: 44px; padding: 26px 34px 20px; font-weight: 700;
+            font-size: 48px; line-height: 1.15; box-shadow: 0 12px 0 rgba(0,0,0,.25); }
+  .bubble::before { content: ''; position: absolute; left: -42px; top: 60px; border: 22px solid transparent;
+                    border-right: 36px solid var(--ink); }
+  .bubble::after { content: ''; position: absolute; left: -26px; top: 66px; border: 16px solid transparent;
+                   border-right: 26px solid #fff; }
+  .bubble h4 { margin: 0 0 6px; font-size: 40px; color: #C25E12; letter-spacing: 1px; }
+  .bubble.win { background: #B8F5C8; }
+  .bubble.win::after { border-right-color: #B8F5C8; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<svg id="bg" viewBox="0 0 1080 1920"></svg>
+<div class="brand">KUIS<b>ABON</b></div>
+<div class="chip" id="chip"></div>
+<div class="card" id="card"><div class="txt" id="cardTxt"></div></div>
+<div id="opts"></div>
+<div class="timer hidden" id="timer"><i id="timerBar"></i></div>
+<div class="count hidden" id="count"></div>
+<svg id="abon" viewBox="150 470 880 1420"></svg>
+<div class="bubble hidden" id="bubble"></div>
+<svg id="fx" viewBox="0 0 1080 1920"></svg>
+
+<script src="../mascot/abon.js"></script>
+<script>
+// Quiz scene. setup(data) builds the DOM; renderFrame(t) positions everything for time t (seconds).
+// data = { quiz, tl } where tl holds {s, e} windows per segment (see src/render.js buildTimeline).
+let D, Q, T, optEls = [];
+const $ = id => document.getElementById(id);
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const easeOut = x => 1 - Math.pow(1 - clamp01(x), 3);
+const backOut = x => { x = clamp01(x); const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const inWin = (t, w) => w && t >= w.s && t < w.e;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Shrinks the font until the text fits its box.
+function fit(el, box, max, min) {
+  for (let size = max; size >= min; size -= 2) {
+    el.style.fontSize = size + 'px';
+    if (box.scrollHeight <= box.clientHeight + 1 && box.scrollWidth <= box.clientWidth + 1) return;
+  }
+}
+
+function setup(data) {
+  D = data; Q = data.quiz; T = data.tl;
+  $('chip').textContent = 'KUIS ' + Q.topicLabel;
+  $('opts').innerHTML = Q.options.map((o, i) =>
+    `<div class="opt" style="top:${640 + i * 124}px"><span class="l">${'ABCD'[i]}</span><span class="o">${esc(o)}</span><span class="mark"></span></div>`).join('');
+  optEls = [...document.querySelectorAll('.opt')];
+  optEls.forEach(el => fit(el.querySelector('.o'), el.querySelector('.o'), 50, 30));
+}
+
+let lastCard = '', lastBubble = '';
+function setCard(kind, text) {
+  const key = kind + text;
+  if (key === lastCard) return;
+  lastCard = key;
+  $('card').className = 'card' + (kind === 'hook' ? ' hook' : '');
+  $('cardTxt').textContent = text;
+  fit($('cardTxt'), $('card'), kind === 'hook' ? 84 : 68, 36);
+}
+function setBubble(html, cls = '') {
+  const b = $('bubble');
+  if (!html) { b.classList.add('hidden'); lastBubble = ''; return; }
+  if (html + cls === lastBubble) return;
+  lastBubble = html + cls;
+  b.className = 'bubble ' + cls;
+  b.innerHTML = html;
+  b.style.fontSize = '48px';
+  for (let s = 48; s >= 28 && b.offsetHeight > 560; s -= 2) b.style.fontSize = s + 'px';
+}
+function pop(el, t0, t) {
+  const k = backOut((t - t0) / 0.3);
+  el.style.transform = `scale(${0.6 + 0.4 * k})`;
+  el.style.opacity = clamp01((t - t0) / 0.15);
+}
+
+function renderFrame(t) {
+  // Background: gradient + drifting question marks.
+  const drift = (t * 18) % 640;
+  $('bg').innerHTML = `
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3A1C71"/><stop offset=".55" stop-color="#5B3FD6"/><stop offset="1" stop-color="#2BB3C0"/>
+    </linearGradient></defs>
+    <rect width="1080" height="1920" fill="url(#g)"/>
+    <g opacity=".07" fill="#fff" font-family="Baloo 2, DejaVu Sans" font-weight="800" font-size="130">
+      ${[...Array(24)].map((_, i) => `<text x="${(i % 6) * 200 - 40 + (Math.floor(i / 6) % 2) * 100}" y="${Math.floor(i / 6) * 640 - drift + 200}">?</text>`).join('')}
+    </g>`;
+
+  // Question card: hook first, then the question.
+  if (t < T.question.s) { setCard('hook', Q.hook); pop($('card'), T.hook.s - 0.1, t); }
+  else { setCard('q', Q.question); pop($('card'), T.question.s - 0.05, t); }
+
+  // Options slide in as they are read, then the correct one lights up.
+  const revealed = t >= T.reveal.s;
+  optEls.forEach((el, i) => {
+    const s = T.opts[i].s - 0.05, k = easeOut((t - s) / 0.35);
+    el.style.opacity = t < s ? 0 : revealed && i !== Q.answer_index ? 0.4 : 1;
+    let tf = `translateX(${(1 - k) * 1100}px)`;
+    if (revealed && i === Q.answer_index) tf += ` scale(${1 + 0.06 * Math.sin(clamp01((t - T.reveal.s) / 0.4) * Math.PI)})`;
+    el.style.transform = tf;
+    el.classList.toggle('correct', revealed && i === Q.answer_index);
+    el.querySelector('.mark').textContent = revealed && i === Q.answer_index ? '✓' : '';
+  });
+
+  // Countdown.
+  const counting = inWin(t, T.countdown);
+  $('timer').classList.toggle('hidden', !(t >= T.think.s && t < T.reveal.s));
+  $('count').classList.toggle('hidden', !counting);
+  if (t >= T.think.s && t < T.reveal.s) {
+    const p = counting ? clamp01((t - T.countdown.s) / (T.countdown.e - T.countdown.s)) : 0;
+    $('timerBar').style.width = (100 - p * 100) + '%';
+    $('timerBar').style.background = p > 0.7 ? '#FF5C5C' : '';
+  }
+  if (counting) {
+    const el = (t - T.countdown.s), n = Math.ceil(5 - el);
+    $('count').textContent = Math.max(1, n);
+    $('count').style.transform = `scale(${1 + 0.25 * (1 - clamp01((el % 1) / 0.25))})`;
+  }
+
+  // Abon's pose follows the segment being played.
+  let pose = 'idle', p0 = 0;
+  if (t < T.question.s) pose = 'wave';
+  else if (t >= T.think.s && t < T.reveal.s) { pose = 'think'; p0 = T.think.s; }
+  else if (t >= T.reveal.s && t < T.fact.s) { pose = t < T.reveal.s + 0.6 ? 'surprised' : 'win'; p0 = pose === 'win' ? T.reveal.s + 0.6 : T.reveal.s; }
+  else if (t >= T.cta.s) { pose = 'wave'; p0 = T.cta.s; }
+  const talking = D.speech.some(w => t >= w.s && t < w.e) && pose !== 'surprised';
+  $('abon').innerHTML = drawAbon(t, pose, t - p0, talking);
+
+  // Speech bubble next to Abon.
+  const letter = 'ABCD'[Q.answer_index];
+  if (t >= T.think.s && t < T.reveal.s) setBubble('Hmm... jawabannya apa ya? 🤔');
+  else if (t >= T.reveal.s && t < T.fact.s) setBubble(`Jawabannya <b>${letter}</b>!<br>${esc(Q.options[Q.answer_index])}`, 'win');
+  else if (t >= T.fact.s && t < T.cta.s) setBubble(`<h4>TAHUKAH KAMU?</h4>${esc(Q.fact)}`);
+  else if (t >= T.cta.s) setBubble('Kamu jawab apa?<br>Tulis di komentar ya! 👇');
+  else setBubble('');
+  if (!$('bubble').classList.contains('hidden')) {
+    const s = [T.think.s, T.reveal.s, T.fact.s, T.cta.s].filter(x => x <= t).pop();
+    pop($('bubble'), s, t);
+  }
+
+  // Confetti on reveal.
+  $('fx').innerHTML = t >= T.reveal.s && t < T.reveal.s + 3 ? confetti(t - T.reveal.s - 0.1) : '';
+}
+window.setup = setup;
+window.renderFrame = renderFrame;
+</script>
+</body>
+</html>

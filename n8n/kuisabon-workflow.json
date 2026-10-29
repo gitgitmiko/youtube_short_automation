@@ -1,0 +1,276 @@
+{
+ "id": "kuisabon-shorts",
+ "name": "KUISABON — YouTube Shorts kuis (pagi & sore)",
+ "active": false,
+ "nodes": [
+  {
+   "id": "k1",
+   "name": "Jadwal",
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "cronExpression",
+       "expression": "0 8 * * *"
+      },
+      {
+       "field": "cronExpression",
+       "expression": "0 15 * * *"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "k2",
+   "name": "Tes manual",
+   "type": "n8n-nodes-base.manualTrigger",
+   "typeVersion": 1,
+   "position": [
+    0,
+    200
+   ],
+   "parameters": {}
+  },
+  {
+   "id": "k3",
+   "name": "Pengaturan",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    100
+   ],
+   "parameters": {
+    "jsCode": "// Slot follows the time of day (WIB). Change privacy to 'unlisted' or 'private' to review videos before they go public.\nconst hour = $now.setZone('Asia/Jakarta').hour;\nreturn [{ json: { slot: hour < 12 ? 'pagi' : 'sore', privacy: 'public' } }];"
+   }
+  },
+  {
+   "id": "k4",
+   "name": "Buat video",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    100
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://172.18.0.1:8797/api/run",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Token",
+       "value": "<SERVICE_TOKEN dari .env>"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ slot: $json.slot }) }}",
+    "options": {
+     "timeout": 900000
+    }
+   }
+  },
+  {
+   "id": "k5",
+   "name": "Ambil video",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    720,
+    100
+   ],
+   "parameters": {
+    "url": "={{ $json.video_url }}",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Token",
+       "value": "<SERVICE_TOKEN dari .env>"
+      }
+     ]
+    },
+    "options": {
+     "timeout": 120000,
+     "response": {
+      "response": {
+       "responseFormat": "file",
+       "outputPropertyName": "data"
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "k6",
+   "name": "Upload YouTube",
+   "type": "n8n-nodes-base.youTube",
+   "typeVersion": 1,
+   "position": [
+    960,
+    100
+   ],
+   "onError": "continueErrorOutput",
+   "parameters": {
+    "resource": "video",
+    "operation": "upload",
+    "title": "={{ $('Buat video').item.json.title }}",
+    "regionCode": "ID",
+    "categoryId": "27",
+    "binaryProperty": "data",
+    "options": {
+     "description": "={{ $('Buat video').item.json.description }}",
+     "tags": "={{ $('Buat video').item.json.tags.join(',') }}",
+     "privacyStatus": "={{ $('Pengaturan').item.json.privacy }}",
+     "defaultLanguage": "id",
+     "selfDeclaredMadeForKids": false,
+     "notifySubscribers": true
+    }
+   }
+  },
+  {
+   "id": "k7",
+   "name": "Tandai terupload",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "=http://172.18.0.1:8797/api/quizzes/{{ $('Buat video').item.json.id }}/uploaded",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Token",
+       "value": "<SERVICE_TOKEN dari .env>"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ youtube_id: $json.uploadId ?? $json.id }) }}",
+    "options": {}
+   }
+  },
+  {
+   "id": "k8",
+   "name": "Tandai gagal",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1200,
+    200
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "=http://172.18.0.1:8797/api/quizzes/{{ $('Buat video').item.json.id }}/failed",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Token",
+       "value": "<SERVICE_TOKEN dari .env>"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ error: $json.error?.message ?? String($json.error ?? 'upload failed') }) }}",
+    "options": {}
+   }
+  }
+ ],
+ "connections": {
+  "Jadwal": {
+   "main": [
+    [
+     {
+      "node": "Pengaturan",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Tes manual": {
+   "main": [
+    [
+     {
+      "node": "Pengaturan",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pengaturan": {
+   "main": [
+    [
+     {
+      "node": "Buat video",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Buat video": {
+   "main": [
+    [
+     {
+      "node": "Ambil video",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Ambil video": {
+   "main": [
+    [
+     {
+      "node": "Upload YouTube",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Upload YouTube": {
+   "main": [
+    [
+     {
+      "node": "Tandai terupload",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Tandai gagal",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "Asia/Jakarta",
+  "saveManualExecutions": true
+ }
+}

@@ -1,0 +1,116 @@
+{
+ "id": "kuisabon-site",
+ "name": "KUISABON — halaman home & privacy (untuk Google OAuth)",
+ "active": false,
+ "nodes": [
+  {
+   "id": "w1",
+   "name": "GET /kuisabon",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    0
+   ],
+   "webhookId": "kuisabon-site-kuisabon",
+   "parameters": {
+    "path": "kuisabon",
+    "httpMethod": "GET",
+    "responseMode": "responseNode",
+    "options": {}
+   }
+  },
+  {
+   "id": "r1",
+   "name": "Halaman kuisabon",
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.1,
+   "position": [
+    260,
+    0
+   ],
+   "parameters": {
+    "respondWith": "text",
+    "responseBody": "<!doctype html><html lang=\"id\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>KUISABON</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.6;color:#1b1035;background:#fff}h1{color:#5B3FD6}a{color:#5B3FD6}</style></head><body>\n<h1>KUISABON</h1>\n<p>KUISABON adalah channel YouTube Shorts berisi kuis seru bersama Abon si kucing oren, tayang setiap pagi dan sore.</p>\n<p><b>KUISABON Uploader</b> adalah alat internal milik pemilik channel untuk mengunggah video kuis ke channel KUISABON miliknya sendiri melalui YouTube Data API.</p>\n<p>Channel: <a href=\"https://www.youtube.com/@gitgitmiko\">youtube.com/@gitgitmiko</a> &middot; <a href=\"https://n8n.gitgitmiko.my.id/webhook/kuisabon-privacy\">Kebijakan Privasi</a></p>\n</body></html>",
+    "options": {
+     "responseHeaders": {
+      "entries": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=utf-8"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "w2",
+   "name": "GET /kuisabon-privacy",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    200
+   ],
+   "webhookId": "kuisabon-site-kuisabon-privacy",
+   "parameters": {
+    "path": "kuisabon-privacy",
+    "httpMethod": "GET",
+    "responseMode": "responseNode",
+    "options": {}
+   }
+  },
+  {
+   "id": "r2",
+   "name": "Halaman kuisabon-privacy",
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.1,
+   "position": [
+    260,
+    200
+   ],
+   "parameters": {
+    "respondWith": "text",
+    "responseBody": "<!doctype html><html lang=\"id\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Kebijakan Privasi KUISABON Uploader</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.6;color:#1b1035;background:#fff}h1{color:#5B3FD6}a{color:#5B3FD6}</style></head><body>\n<h1>Kebijakan Privasi &mdash; KUISABON Uploader</h1>\n<p><i>Berlaku sejak 29 Oktober 2026</i></p>\n<p>KUISABON Uploader adalah aplikasi pribadi yang hanya digunakan oleh pemilik channel KUISABON untuk mengunggah video ke channel YouTube miliknya sendiri.</p>\n<h2>Data yang diakses</h2>\n<p>Aplikasi meminta izin YouTube (Google OAuth) hanya untuk mengunggah dan mengelola video di channel pemilik. Aplikasi tidak mengumpulkan, menjual, atau membagikan data pribadi pengguna lain.</p>\n<h2>Penyimpanan</h2>\n<p>Token akses Google disimpan terenkripsi di server milik pemilik channel dan hanya dipakai untuk proses unggah video. Token dapat dicabut kapan saja di <a href=\"https://myaccount.google.com/permissions\">myaccount.google.com/permissions</a>.</p>\n<h2>Layanan Google</h2>\n<p>Penggunaan data dari Google API mengikuti <a href=\"https://developers.google.com/terms/api-services-user-data-policy\">Google API Services User Data Policy</a> dan <a href=\"https://www.youtube.com/t/terms\">Ketentuan Layanan YouTube</a>.</p>\n<h2>Kontak</h2>\n<p>sjatmiko30@gmail.com</p>\n</body></html>",
+    "options": {
+     "responseHeaders": {
+      "entries": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=utf-8"
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "connections": {
+  "GET /kuisabon": {
+   "main": [
+    [
+     {
+      "node": "Halaman kuisabon",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "GET /kuisabon-privacy": {
+   "main": [
+    [
+     {
+      "node": "Halaman kuisabon-privacy",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1"
+ }
+}

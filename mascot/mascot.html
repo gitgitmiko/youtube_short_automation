@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: #000; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg id="stage" width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg"></svg>
+<script src="abon.js"></script>
+<script>
+// Mascot preview: cycles through Abon's poses.
+function renderFrame(t) {
+  const [pose, t0, talking, line] =
+    t < 2.3 ? ['wave', 0, t > 0.35 && t < 2.0, 'Meong! Aku Abon, siap kuis?'] :
+    t < 4.6 ? ['think', 2.3, t > 2.6 && t < 3.9, 'Hmm... jawabannya apa ya?'] :
+    t < 5.3 ? ['surprised', 4.6, false, 'Hah?!'] : ['win', 5.3, false, 'BENAR! Kamu hebat!'];
+  const bgShift = Math.sin(t * 0.8) * 40;
+  document.getElementById('stage').innerHTML = `
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#3A1C71"/><stop offset=".55" stop-color="#5B3FD6"/><stop offset="1" stop-color="#2BB3C0"/>
+      </linearGradient>
+    </defs>
+    <rect width="1080" height="1920" fill="url(#bg)"/>
+    <g opacity=".08" fill="#fff" font-family="DejaVu Sans, Arial, sans-serif" font-weight="900" font-size="120">
+      ${[...Array(18)].map((_, i) => `<text x="${(i % 6) * 200 - 40 + (Math.floor(i / 6) % 2) * 100}" y="${200 + Math.floor(i / 6) * 640 + bgShift}">?</text>`).join('')}
+    </g>
+    ${drawAbon(t, pose, t - t0, talking)}
+    ${pose === 'win' ? confetti(t - 5.3) : ''}
+    ${bubble(line, t0 + 0.05, t, pose === 'win' ? '#B8F5C8' : '#fff')}`;
+}
+window.renderFrame = renderFrame;
+renderFrame(0);
+</script>
+</body>
+</html>
