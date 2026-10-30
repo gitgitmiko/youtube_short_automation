@@ -60,7 +60,7 @@ module.exports = {
   },
 
   // Upload times set in the n8n "Jadwal" node (WIB). Only used by the monitoring endpoints; keep in sync.
-  uploadTimes: list('UPLOAD_TIMES', '08:00,15:00'),
+  uploadTimes: list('UPLOAD_TIMES', '15:00,20:00'),
 
   // Weekday (0 = Sunday) -> topic key.
   schedule: { 1: 'umum', 2: 'umum', 3: 'sejarah', 4: 'sejarah', 5: 'inggris', 6: 'inggris', 0: 'keuangan' },
@@ -90,6 +90,7 @@ module.exports = {
 
   slots: {
     pagi: { difficulty: 'mudah sampai sedang' },
-    sore: { difficulty: 'sedang sampai agak sulit' },
+    malam: { difficulty: 'sedang sampai agak sulit' },
+    sore: { difficulty: 'mudah sampai sedang' },
   },
 };

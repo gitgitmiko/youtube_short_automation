@@ -3,7 +3,7 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const config = require('./config');
 const db = require('./db');
-const { topicFor } = require('./quiz');
+const { topicFor, slotForHour } = require('./quiz');
 
 const run = promisify(execFile);
 const TZ_OFFSET = '+07:00';   // Asia/Jakarta has no DST
@@ -44,7 +44,7 @@ function nextSlot(now = new Date()) {
       const at = new Date(`${date}T${time}:00${TZ_OFFSET}`);
       if (at > now) {
         const topic = topicFor(at);
-        return { at: at.toISOString(), time, slot: Number(time.slice(0, 2)) < 12 ? 'pagi' : 'sore', topic, topicLabel: config.topics[topic].label };
+        return { at: at.toISOString(), time, slot: slotForHour(Number(time.slice(0, 2))), topic, topicLabel: config.topics[topic].label };
       }
     }
   }
@@ -64,7 +64,7 @@ function overview({ busy, stage }) {
     const r = todayRuns.find(x => { const t = new Date(x.started_at) - at; return t >= -10 * 60e3 && t <= 90 * 60e3; });
     const topic = topicFor(at);
     return {
-      time, slot: Number(time.slice(0, 2)) < 12 ? 'pagi' : 'sore', topic, topicLabel: config.topics[topic].label,
+      time, slot: slotForHour(Number(time.slice(0, 2))), topic, topicLabel: config.topics[topic].label,
       status: r ? r.status : now > new Date(at.getTime() + 20 * 60e3) ? 'missed' : 'waiting',
       run: r || null,
     };

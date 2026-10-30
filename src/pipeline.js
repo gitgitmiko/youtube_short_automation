@@ -14,7 +14,7 @@ function metadata(q) {
     '',
     'Kamu jawab apa? Tulis di kolom komentar! 👇',
     '',
-    `${config.channelName}: kuis seru bareng Abon si kucing oren, setiap pagi & sore. Jangan lupa subscribe!`,
+    `${config.channelName}: kuis seru bareng Abon si kucing oren, setiap hari. Jangan lupa subscribe!`,
     '',
     tags.slice(0, 12).map(t => `#${t}`).join(' '),
   ].join('\n');

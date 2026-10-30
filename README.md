@@ -1,6 +1,6 @@
 # KUISABON — YouTube Shorts kuis otomatis
 
-Setiap pagi (08:00 WIB) dan sore (15:00 WIB) n8n meminta service ini membuat satu video kuis
+Setiap sore (15:00 WIB) dan malam (20:00 WIB) n8n meminta service ini membuat satu video kuis
 bersama Abon si kucing oren, lalu mengunggahnya ke YouTube.
 
 ```
@@ -20,7 +20,7 @@ n8n ──GET video──▶ Upload YouTube ──▶ POST /api/quizzes/<id>/upl
 | Jumat, Sabtu | Bahasa Inggris |
 | Minggu | Keuangan & teknologi |
 
-Pagi = mudah–sedang, sore = sedang–sulit. Diatur di `src/config.js`.
+Sore = mudah–sedang, malam = sedang–sulit. Diatur di `src/config.js`.
 
 ## Perintah
 ```bash

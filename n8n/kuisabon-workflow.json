@@ -1,6 +1,6 @@
 {
  "id": "kuisabon-shorts",
- "name": "KUISABON — YouTube Shorts kuis (pagi & sore)",
+ "name": "KUISABON — YouTube Shorts kuis (sore & malam)",
  "active": false,
  "nodes": [
   {
@@ -17,11 +17,11 @@
      "interval": [
       {
        "field": "cronExpression",
-       "expression": "0 8 * * *"
+       "expression": "0 15 * * *"
       },
       {
        "field": "cronExpression",
-       "expression": "0 15 * * *"
+       "expression": "0 20 * * *"
       }
      ]
     }
@@ -48,7 +48,7 @@
     100
    ],
    "parameters": {
-    "jsCode": "// Slot follows the time of day (WIB). Change privacy to 'unlisted' or 'private' to review videos before they go public.\nconst hour = $now.setZone('Asia/Jakarta').hour;\nreturn [{ json: { slot: hour < 12 ? 'pagi' : 'sore', privacy: 'public' } }];"
+    "jsCode": "// Slot follows the time of day (WIB). Change privacy to 'unlisted' or 'private' to review videos before they go public.\nconst hour = $now.setZone('Asia/Jakarta').hour;\nreturn [{ json: { slot: hour < 12 ? 'pagi' : hour < 18 ? 'sore' : 'malam', privacy: 'public' } }];"
    }
   },
   {

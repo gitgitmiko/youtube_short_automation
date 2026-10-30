@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Usage:
-//   node src/cli.js run [--topic umum|sejarah|inggris|keuangan] [--slot pagi|sore]   full job, prints result JSON
+//   node src/cli.js run [--topic umum|sejarah|inggris|keuangan] [--slot pagi|sore|malam] full job, prints result JSON
 //   node src/cli.js quiz [--topic ...] [--slot ...]                                   only generate + verify a quiz
 //   node src/cli.js render <id>                                                        re-render a stored quiz
 //   node src/cli.js recent                                                             list recent quizzes

@@ -10,9 +10,10 @@ function topicFor(date = new Date()) {
   const wd = new Date(date.toLocaleString('en-US', { timeZone: config.timezone })).getDay();
   return config.schedule[wd];
 }
+const slotForHour = h => h < 12 ? 'pagi' : h < 18 ? 'sore' : 'malam';
 function slotFor(date = new Date()) {
   const h = Number(date.toLocaleString('en-US', { timeZone: config.timezone, hour: 'numeric', hour12: false }));
-  return h < 12 ? 'pagi' : 'sore';
+  return slotForHour(h);
 }
 
 // ---- de-duplication -------------------------------------------------------------
@@ -134,4 +135,4 @@ async function generateQuiz({ topic = topicFor(), slot = slotFor(), maxAttempts 
   throw new Error(`no valid quiz after ${maxAttempts} attempts; last reason: ${feedback}`);
 }
 
-module.exports = { generateQuiz, topicFor, slotFor, similarity, validate };
+module.exports = { generateQuiz, topicFor, slotFor, slotForHour, similarity, validate };
