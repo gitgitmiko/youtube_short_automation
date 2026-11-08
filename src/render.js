@@ -1,4 +1,5 @@
-// Turns a quiz into an MP4: TTS lines -> timeline -> mixed audio track -> frames from quiz/template.html -> ffmpeg.
+// Turns a quiz into an MP4: TTS lines + background pictures -> timeline -> mixed audio track -> frames from
+// quiz/template.html -> ffmpeg.
 const { spawn, execFile } = require('child_process');
 const { promisify } = require('util');
 const fs = require('fs');
@@ -6,6 +7,7 @@ const path = require('path');
 const { chromium } = require('playwright-core');
 const config = require('./config');
 const { speak } = require('./tts');
+const { makeVisuals } = require('./visual');
 
 const run = promisify(execFile);
 const SFX = name => path.join(config.ASSETS_DIR, 'sfx', `${name}.wav`);
@@ -95,7 +97,7 @@ async function renderFrames(data, audio, out, log) {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
     await page.goto('file://' + path.join(config.ROOT, 'quiz', 'template.html'));
     await page.evaluate(d => window.setup(d), data);
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => Promise.all([document.fonts.ready, window.imagesReady()]));
     for (let f = 0; f < total; f++) {
       await page.evaluate(t => window.renderFrame(t), f / fps);
       const buf = await page.screenshot({ type: 'jpeg', quality: 92 });
@@ -112,19 +114,23 @@ async function renderFrames(data, audio, out, log) {
 // Renders `quiz` into <workDir>/video.mp4 and returns its path and duration.
 async function renderQuiz(quiz, workDir, log = console.log) {
   fs.mkdirSync(workDir, { recursive: true });
-  log('tts...');
+  log('tts + visuals...');
   const entries = Object.entries(lines(quiz));
-  const clips = Object.fromEntries(await Promise.all(entries.map(async ([k, text]) => [k, await speak(text, workDir, k)])));
+  const [clips, pics] = await Promise.all([
+    Promise.all(entries.map(async ([k, text]) => [k, await speak(text, workDir, k)])).then(Object.fromEntries),
+    makeVisuals(quiz, workDir, log),
+  ]);
+  const visual = pics && { question: 'file://' + pics.question, answer: 'file://' + pics.answer };
   const { tl, events, speech } = buildTimeline(clips);
   log(`timeline: ${tl.duration.toFixed(1)}s`);
   const audio = path.join(workDir, 'audio.wav');
   await mixAudio(events, tl.duration, audio);
   log('rendering frames...');
   const video = path.join(workDir, 'video.mp4');
-  await renderFrames({ quiz, tl, speech }, audio, video, log);
-  // Keep only the final video in the work dir.
-  for (const f of fs.readdirSync(workDir)) if (f !== 'video.mp4') fs.rmSync(path.join(workDir, f), { force: true });
-  return { video, duration: tl.duration };
+  await renderFrames({ quiz, tl, speech, visual }, audio, video, log);
+  // Keep only the final video (and gflow's log, for diagnosing missing pictures) in the work dir.
+  for (const f of fs.readdirSync(workDir)) if (!['video.mp4', 'gflow.log'].includes(f)) fs.rmSync(path.join(workDir, f), { force: true });
+  return { video, duration: tl.duration, scenes: pics && pics.scenes };
 }
 
 module.exports = { renderQuiz, buildTimeline, lines };

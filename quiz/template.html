@@ -9,6 +9,11 @@
   html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #2a1760; }
   body { font-family: 'Baloo 2', 'DejaVu Sans', sans-serif; color: var(--ink); position: relative; }
   #bg { position: absolute; inset: 0; }
+  #photo { position: absolute; inset: 0; overflow: hidden; }
+  #photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+  /* Darkens the top (behind the brand) and the bottom (behind Abon) so the overlays read on any picture. */
+  #shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(20,10,50,.6) 0, rgba(20,10,50,.1) 16%,
+           rgba(20,10,50,0) 45%, rgba(20,10,50,.05) 65%, rgba(20,10,50,.45) 100%); }
   #abon { position: absolute; left: -10px; top: 1195px; width: 450px; height: 727px; }
   #fx { position: absolute; inset: 0; pointer-events: none; }
 
@@ -33,6 +38,8 @@
   .opt .o { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 6px; }
   .opt.correct { background: var(--green); color: #fff; }
   .opt.correct .l { background: #fff; color: var(--green); }
+  .opt.dim { background: #E2DEEC; color: #8C85A3; }
+  .opt.dim .l { background: #A9A2C2; }
   .opt .mark { font-size: 60px; font-weight: 800; margin-left: 10px; }
 
   .timer { position: absolute; left: 60px; right: 230px; top: 1185px; height: 30px; border-radius: 20px;
@@ -57,6 +64,7 @@
 </head>
 <body>
 <svg id="bg" viewBox="0 0 1080 1920"></svg>
+<div id="photo" class="hidden"><img id="imgQ"><img id="imgA"><div id="shade"></div></div>
 <div class="brand">KUIS<b>ABON</b></div>
 <div class="chip" id="chip"></div>
 <div class="card" id="card"><div class="txt" id="cardTxt"></div></div>
@@ -70,7 +78,8 @@
 <script src="../mascot/abon.js"></script>
 <script>
 // Quiz scene. setup(data) builds the DOM; renderFrame(t) positions everything for time t (seconds).
-// data = { quiz, tl } where tl holds {s, e} windows per segment (see src/render.js buildTimeline).
+// data = { quiz, tl, speech, visual } where tl holds {s, e} windows per segment (see src/render.js buildTimeline)
+// and visual, when present, holds file URLs of the question and answer pictures (see src/visual.js).
 let D, Q, T, optEls = [];
 const $ = id => document.getElementById(id);
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -94,7 +103,15 @@ function setup(data) {
     `<div class="opt" style="top:${640 + i * 124}px"><span class="l">${'ABCD'[i]}</span><span class="o">${esc(o)}</span><span class="mark"></span></div>`).join('');
   optEls = [...document.querySelectorAll('.opt')];
   optEls.forEach(el => fit(el.querySelector('.o'), el.querySelector('.o'), 50, 30));
+  if (data.visual) {
+    $('imgQ').src = data.visual.question;
+    $('imgA').src = data.visual.answer;
+    $('photo').classList.remove('hidden');
+    $('bg').classList.add('hidden');
+  }
 }
+// Resolves once both pictures are decoded, so the first frames never show an empty background.
+window.imagesReady = () => Promise.all([...document.querySelectorAll('#photo img')].filter(i => i.src).map(i => i.decode()));
 
 let lastCard = '', lastBubble = '';
 function setCard(kind, text) {
@@ -121,7 +138,26 @@ function pop(el, t0, t) {
   el.style.opacity = clamp01((t - t0) / 0.15);
 }
 
+// Picture background: a slow push-in on the question picture, then the answer picture crossfades in at the reveal.
+function renderPhoto(t) {
+  const xf = clamp01((t - T.reveal.s) / 0.5);
+  const kb = (img, s, e, from, to) => {
+    const k = clamp01((t - s) / (e - s));
+    img.style.transform = `scale(${from + (to - from) * k}) translate(${(k - 0.5) * -14}px, ${(k - 0.5) * -10}px)`;
+  };
+  kb($('imgQ'), 0, T.reveal.s, 1.03, 1.15);
+  kb($('imgA'), T.reveal.s, T.duration, 1.15, 1.03);
+  $('imgQ').style.opacity = 1;
+  $('imgA').style.opacity = xf;
+}
+
 function renderFrame(t) {
+  if (D.visual) renderPhoto(t);
+  else renderBg(t);
+  renderScene(t);
+}
+
+function renderBg(t) {
   // Background: gradient + drifting question marks.
   const drift = (t * 18) % 640;
   $('bg').innerHTML = `
@@ -132,7 +168,9 @@ function renderFrame(t) {
     <g opacity=".07" fill="#fff" font-family="Baloo 2, DejaVu Sans" font-weight="800" font-size="130">
       ${[...Array(24)].map((_, i) => `<text x="${(i % 6) * 200 - 40 + (Math.floor(i / 6) % 2) * 100}" y="${Math.floor(i / 6) * 640 - drift + 200}">?</text>`).join('')}
     </g>`;
+}
 
+function renderScene(t) {
   // Question card: hook first, then the question.
   if (t < T.question.s) { setCard('hook', Q.hook); pop($('card'), T.hook.s - 0.1, t); }
   else { setCard('q', Q.question); pop($('card'), T.question.s - 0.05, t); }
@@ -141,8 +179,13 @@ function renderFrame(t) {
   const revealed = t >= T.reveal.s;
   optEls.forEach((el, i) => {
     const s = T.opts[i].s - 0.05, k = easeOut((t - s) / 0.35);
-    el.style.opacity = t < s ? 0 : revealed && i !== Q.answer_index ? 0.4 : 1;
-    let tf = `translateX(${(1 - k) * 1100}px)`;
+    const wrong = revealed && i !== Q.answer_index;
+    // Over a picture a see-through option is hard to read, so wrong ones turn grey instead of fading.
+    el.style.opacity = t < s ? 0 : wrong && !D.visual ? 0.4 : 1;
+    el.classList.toggle('dim', wrong && !!D.visual);
+    // With a picture behind them the options leave during the fact, so the answer picture shows in full.
+    const out = D.visual ? easeOut((t - T.fact.s - i * 0.06) / 0.4) : 0;
+    let tf = `translateX(${(1 - k) * 1100 - out * 1100}px)`;
     if (revealed && i === Q.answer_index) tf += ` scale(${1 + 0.06 * Math.sin(clamp01((t - T.reveal.s) / 0.4) * Math.PI)})`;
     el.style.transform = tf;
     el.classList.toggle('correct', revealed && i === Q.answer_index);

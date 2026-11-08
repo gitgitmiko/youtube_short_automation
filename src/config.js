@@ -53,6 +53,18 @@ module.exports = {
     keepDays: Number(env('KEEP_VIDEOS_DAYS', 7)),
   },
 
+  // Background pictures drawn by Google Flow through gflow-cli (see src/visual.js).
+  visual: {
+    enabled: env('VISUAL_ENABLED', '1') !== '0',
+    bin: env('GFLOW_BIN', path.join(ROOT, '..', 'gflow-cli', '.venv', 'bin', 'gflow')),
+    model: env('GFLOW_MODEL', 'nano2'),
+    display: env('GFLOW_DISPLAY', ':99'),
+    lockFile: env('GFLOW_LOCK', '/tmp/gflow-profile.lock'),
+    lockWaitSec: Number(env('GFLOW_LOCK_WAIT', 1800)),
+    timeoutMs: Number(env('GFLOW_TIMEOUT_MS', 900e3)),
+    retryDelayMs: Number(env('GFLOW_RETRY_DELAY_MS', 180e3)),
+  },
+
   server: {
     host: env('HOST', '172.18.0.1'),   // docker bridge of the n8n network, reachable from the n8n container
     port: Number(env('PORT', 8797)),
